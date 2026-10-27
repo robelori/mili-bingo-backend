@@ -1,0 +1,87 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  PLAYER
+  ADMIN
+}
+
+enum TxType {
+  DEPOSIT
+  WITHDRAWAL
+  GAME_BET
+  GAME_WIN
+  BONUS
+  ADMIN_ADJUST
+}
+
+enum TxStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id           String        @id @default(uuid())
+  username     String        @unique
+  passwordHash String
+  role         Role          @default(PLAYER)
+  cashBalance  Decimal       @default(0.00) @db.Decimal(12, 2)
+  bonusBalance Decimal       @default(50.00) @db.Decimal(12, 2)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  transactions Transaction[]
+  GameWinner   GameWinner[]
+}
+
+model Transaction {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  type         TxType
+  status       TxStatus @default(PENDING)
+  amount       Decimal  @db.Decimal(12, 2)
+  reference    String?  
+  description  String
+  reviewedBy   String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Room {
+  id          Int        @id @default(autoincrement())
+  name        String
+  stake       Decimal    @db.Decimal(10, 2)
+  isActive    Boolean    @default(true)
+  games       Game[]
+}
+
+model Game {
+  id            String       @id @default(uuid())
+  roomId        Int
+  room          Room         @relation(fields: [roomId], references: [id])
+  calledNumbers Int[]
+  totalPool     Decimal      @db.Decimal(12, 2)
+  commission    Decimal      @db.Decimal(12, 2)
+  status        String       
+  winners       GameWinner[]
+  createdAt     DateTime     @default(now())
+  endedAt       DateTime?
+}
+
+model GameWinner {
+  id        String   @id @default(uuid())
+  gameId    String
+  game      Game     @relation(fields: [gameId], references: [id])
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  cartelaId Int
+  prize     Decimal  @db.Decimal(12, 2)
+  createdAt DateTime @default(now())
+}
